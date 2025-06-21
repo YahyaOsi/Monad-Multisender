@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monad Multisender by YahyaOsi</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Ethers.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col items-center p-4">
+
+    <header class="text-center my-8">
+        <h1 class="text-4xl font-bold text-white">Monad Multisender</h1>
+        <p class="text-purple-400">by YahyaOsi</p>
+    </header>
+
+    <div class="w-full max-w-4xl space-y-8">
+        
+        <!-- Instructions Section -->
+        <div id="instructions" class="bg-gray-900 rounded-2xl shadow-lg p-6 md:p-8 border border-purple-800/50">
+            <h2 class="text-2xl font-bold text-center mb-4 text-purple-400">How to Use This Tool</h2>
+            
+            <p class="text-center text-gray-400 mb-6">This tool requires you to deploy a smart contract first. Follow these steps carefully.</p>
+            
+            <div class="space-y-6">
+                <!-- Step 1 -->
+                <div class="flex items-start space-x-4">
+                    <div class="step-number">1</div>
+                    <div>
+                        <h3 class="font-bold text-lg text-white">Deploy the Smart Contract</h3>
+                        <ol class="list-decimal list-inside mt-2 space-y-2 text-gray-400">
+                            <li>Go to <a href="https://remix.ethereum.org/" target="_blank" class="text-purple-400 hover:underline">Remix IDE</a>.</li>
+                            <li>Create a new file named `ERC20Multisender.sol`.</li>
+                            <li>Copy the code below and paste it into the file.</li>
+                            <li>From the "Solidity Compiler" tab, click "Compile".</li>
+                            <li>From the "Deploy & Run" tab, select `Injected Provider - MetaMask` and ensure you are on the Monad Testnet.</li>
+                            <li>Click "Deploy" and approve the transaction in MetaMask.</li>
+                            <li>After deployment, copy the <strong>Deployed Contract Address</strong> to use in the tool below.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Code Block -->
+                <div>
+                    <h4 class="font-semibold mb-2 text-center">Smart Contract Code (ERC20Multisender.sol)</h4>
+                    <pre><code id="solidity-code">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contracts/token/ERC20/IERC20.sol";
+
+contract ERC20Multisender {
+    event TokensDispersed(address indexed token, uint256 totalAmount);
+
+    function disperseToken(
+        address tokenAddress,
+        address[] calldata recipients,
+        uint256[] calldata amounts
+    ) external {
+        require(recipients.length == amounts.length, "Arrays must be equal length.");
+        require(recipients.length > 0, "Must have at least one recipient.");
+
+        IERC20 token = IERC20(tokenAddress);
+        uint256 totalAmount = 0;
+        for (uint i = 0; i < amounts.length; i++) {
+            totalAmount += amounts[i];
+        }
+
+        token.transferFrom(msg.sender, address(this), totalAmount);
+
+        for (uint i = 0; i < recipients.length; i++) {
+            token.transfer(recipients[i], amounts[i]);
+        }
+
+        emit TokensDispersed(tokenAddress, totalAmount);
+    }
+}</code></pre>
+                </div>
+                 <!-- Step 2 -->
+                <div class="flex items-start space-x-4">
+                    <div class="step-number">2</div>
+                    <div>
+                        <h3 class="font-bold text-lg text-white">Use the DApp</h3>
+                        <p class="text-gray-300">Now that you have the contract address, you can use the tool below.</p>
+                         <ol class="list-decimal list-inside mt-2 space-y-2 text-gray-400">
+                              <li>Click "Connect Wallet" and ensure you're on the Monad network.</li>
+                              <li>Paste your copied <strong>Contract Address</strong> into the "Multisender Contract Address" field.</li>
+                              <li>Fill out the other fields and execute the "Approve" and then "Disperse" transactions.</li>
+                         </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Application -->
+        <div id="app-main" class="w-full max-w-2xl mx-auto bg-gray-900 rounded-2xl shadow-lg p-6 md:p-8 space-y-6 border border-purple-800/50">
+            
+            <div class="text-center">
+                <h1 class="text-2xl md:text-3xl font-bold text-purple-400">Multisender DApp</h1>
+            </div>
+
+            <div id="connect-container" class="text-center">
+                <button id="connectWalletBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 shadow-lg">
+                    Connect Wallet
+                </button>
+                <p id="installMetaMask" class="text-red-400 mt-2 hidden">Please install MetaMask to continue.</p>
+            </div>
+
+            <div id="app-container" class="hidden space-y-6">
+                
+                <div id="connection-status" class="bg-black/50 p-3 rounded-lg text-center">
+                    <p class="text-sm text-gray-400">Connected Account:</p>
+                    <p id="walletAddress" class="font-mono text-sm break-all text-green-400"></p>
+                    <p id="networkStatus" class="text-sm mt-1"></p>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-2 text-purple-300">Step 1: Contract Addresses</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="multisenderContractAddress" class="block text-sm font-medium text-gray-300 mb-1">Multisender Contract Address (from Remix)</label>
+                            <input type="text" id="multisenderContractAddress" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white focus:ring-purple-500 focus:border-purple-500 font-mono" placeholder="0x... (paste your deployed contract address here)">
+                        </div>
+                        <div>
+                            <label for="tokenContractAddress" class="block text-sm font-medium text-gray-300 mb-1">ERC20 Token Contract Address</label>
+                            <input type="text" id="tokenContractAddress" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white focus:ring-purple-500 focus:border-purple-500 font-mono" placeholder="0x...">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-2 text-purple-300">Step 2: Recipients & Amounts</h3>
+                    <p class="text-sm text-gray-400 mb-2">Enter each recipient on a new line with the format: `address,amount`</p>
+                    <textarea id="recipientsData" rows="8" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white focus:ring-purple-500 focus:border-purple-500 font-mono" placeholder="0x123...,100&#10;0x456...,25.5&#10;0x789...,500"></textarea>
+                    <div class="text-left mt-2">
+                        <button id="fillExample" class="text-xs text-purple-400 hover:underline">Fill Example</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-2 text-purple-300">Step 3: Execute</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button id="approveBtn" class="w-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:bg-gray-800 disabled:cursor-not-allowed">
+                            <span class="btn-text">1. Approve</span>
+                            <div class="loading-spinner hidden ml-2"></div>
+                        </button>
+                        <button id="sendBtn" class="w-full flex items-center justify-center bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:bg-gray-800 disabled:cursor-not-allowed">
+                            <span class="btn-text">2. Disperse</span>
+                            <div class="loading-spinner hidden ml-2"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-2 text-purple-300">Transaction Log</h3>
+                    <div id="log" class="bg-black/70 p-4 rounded-lg h-32 overflow-y-auto border border-gray-700 text-sm font-mono">
+                        <p class="text-gray-500">Log messages will appear here...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-8 text-center text-gray-500 text-sm">
+            <p>Made with 💜 by <a href="https://x.com/YahyaOsi" target="_blank" rel="noopener noreferrer" class="text-purple-400 hover:underline">@YahyaOsi</a></p>
+        </footer>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
